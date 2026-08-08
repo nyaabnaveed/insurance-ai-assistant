@@ -1,34 +1,61 @@
 import os
 import struct
 import pyodbc
+import streamlit as st
 
 from dotenv import load_dotenv
 from sqlalchemy import create_engine
-from azure.identity import InteractiveBrowserCredential, TokenCachePersistenceOptions
+from azure.identity import ClientSecretCredential
 
 load_dotenv()
 
-FABRIC_SERVER = os.getenv("FABRIC_SERVER")
+
+# =========================================================
+# Configuration
+# =========================================================
+
+def get_secret(name):
+    """
+    Get configuration from Streamlit Cloud Secrets.
+    Fall back to .env when running locally.
+    """
+    try:
+        return st.secrets[name]
+    except Exception:
+        return os.getenv(name)
+
+
+FABRIC_SERVER = get_secret("FABRIC_SERVER")
 DATABASE = "insurance_lakehouse"
 
-# Microsoft Entra login
-cache_options = TokenCachePersistenceOptions(
-    name="insurance-ai-assistant",
-    allow_unencrypted_storage=True
+AZURE_CLIENT_ID = get_secret("AZURE_CLIENT_ID")
+AZURE_TENANT_ID = get_secret("AZURE_TENANT_ID")
+AZURE_CLIENT_SECRET = get_secret("AZURE_CLIENT_SECRET")
+
+
+# =========================================================
+# Microsoft Entra Service Principal
+# =========================================================
+
+credential = ClientSecretCredential(
+    tenant_id=AZURE_TENANT_ID,
+    client_id=AZURE_CLIENT_ID,
+    client_secret=AZURE_CLIENT_SECRET
 )
 
-credential = InteractiveBrowserCredential(
-    cache_persistence_options=cache_options
-)
+
+# =========================================================
+# Fabric SQL Connection
+# =========================================================
 
 def get_connection():
-    # Get Microsoft Entra access token for Azure SQL/Fabric SQL
+
     token = credential.get_token(
         "https://database.windows.net/.default"
     )
 
-    # Convert token into format required by ODBC Driver 18
     token_bytes = token.token.encode("utf-16-le")
+
     token_struct = struct.pack(
         f"<I{len(token_bytes)}s",
         len(token_bytes),
@@ -49,7 +76,10 @@ def get_connection():
     )
 
 
-# SQLAlchemy engine
+# =========================================================
+# SQLAlchemy Engine
+# =========================================================
+
 engine = create_engine(
     "mssql+pyodbc://",
     creator=get_connection
