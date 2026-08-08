@@ -1,6 +1,7 @@
 streamlit
 groq
-python-dotenv
-pyodbc
+pandas
 sqlalchemy
+pyodbc
+python-dotenv
 azure-identity
