@@ -62,18 +62,34 @@ def get_connection():
         token_bytes
     )
 
-    connection_string = (
-        "Driver={ODBC Driver 18 for SQL Server};"
-        f"Server={FABRIC_SERVER};"
-        f"Database={DATABASE};"
-        "Encrypt=yes;"
-        "TrustServerCertificate=no;"
-    )
+    # Try Driver 18 first (works locally), fall back to 17 (Streamlit Cloud)
+    drivers_to_try = [
+        "ODBC Driver 18 for SQL Server",
+        "ODBC Driver 17 for SQL Server",
+    ]
 
-    return pyodbc.connect(
-        connection_string,
-        attrs_before={1256: token_struct}
-    )
+    last_error = None
+
+    for driver in drivers_to_try:
+        try:
+            connection_string = (
+                f"Driver={{{driver}}};"
+                f"Server={FABRIC_SERVER};"
+                f"Database={DATABASE};"
+                "Encrypt=yes;"
+                "TrustServerCertificate=no;"
+            )
+
+            return pyodbc.connect(
+                connection_string,
+                attrs_before={1256: token_struct}
+            )
+
+        except pyodbc.Error as e:
+            last_error = e
+            continue
+
+    raise last_error
 
 
 # =========================================================
