@@ -71,7 +71,7 @@ Now convert the user's question into SQL.
 def generate_sql(question):
 
     response = client.chat.completions.create(
-        model="llama-3.3-70b-versatile",
+        model="openai/gpt-oss-120b",
         messages=[
             {
                 "role": "system",
@@ -128,7 +128,7 @@ Rules:
 """
 
     response = client.chat.completions.create(
-        model="llama-3.3-70b-versatile",
+        model="openai/gpt-oss-120b",
         messages=[
             {
                 "role": "system",
